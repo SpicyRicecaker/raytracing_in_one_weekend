@@ -1,11 +1,15 @@
-use std::error::Error;
 use std::fmt::Write;
-use std::fs::{self, File};
+use std::fs;
 
 use log::info;
 
 const IMAGE_WIDTH: u32 = 256;
 const IMAGE_HEIGHT: u32 = 256;
+
+use raytracing_in_one_weekend::color::*;
+use raytracing_in_one_weekend::vec::*;
+use raytracing_in_one_weekend::vec3;
+use raytracing_in_one_weekend::Error;
 
 fn main() -> Result<(), Box<dyn Error>> {
     env_logger::init();
@@ -19,11 +23,12 @@ fn main() -> Result<(), Box<dyn Error>> {
     for y in 0..IMAGE_HEIGHT {
         for x in 0..IMAGE_WIDTH {
             info!("scanlines remaining: {}", IMAGE_HEIGHT - y);
-            let r = x;
-            let g = y;
-            let b = 0;
-
-            writeln!(buf, "{} {} {}", r, g, b)?;
+            let color = vec3![
+                (x as f64) / (IMAGE_WIDTH as f64 - 1.),
+                (y as f64) / (IMAGE_HEIGHT as f64 - 1.),
+                0.
+            ];
+            write_color(&mut buf, color)?;
         }
     }
 
