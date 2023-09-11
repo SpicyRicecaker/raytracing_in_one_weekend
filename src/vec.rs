@@ -30,6 +30,9 @@ impl Vec3 {
     pub fn unit_vec(&self) -> Vec3 {
         *self / self.len()
     }
+    pub fn normalized(&self) -> Vec3 {
+        self.unit_vec()
+    }
     pub fn dot(&self, rhs: Vec3) -> f64 {
         self.x * rhs.y + self.y * rhs.y + self.z * rhs.z
     }
