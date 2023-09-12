@@ -20,7 +20,7 @@ struct Scene {
 }
 
 enum Object {
-    Sphere { radius: f64, position: Vec3 },
+    Sphere { radius: f64, center: Vec3 },
 }
 
 #[derive(Debug)]
@@ -115,22 +115,22 @@ fn lerp(start: Vec3, end: Vec3, x: f64) -> Vec3 {
     (1. - x) * start + x * end
 }
 
-fn ray_color(camera: &Camera, mut ray: Ray, scene: &Scene) -> Color {
-    let mut distance_left: f64 = 10.;
-    let step = 0.01;
+fn ray_color(camera: &Camera, ray: Ray, scene: &Scene) -> Color {
     let mut intersection = false;
-    'a: while distance_left > 0. {
-        ray.origin += ray.direction.normalized() * step;
-        distance_left -= step;
-        for object in scene.objects.iter() {
-            match object {
-                Object::Sphere { radius, position } => {
-                    if (ray.origin.x - position.x).powf(2.)
-                        + (ray.origin.y - position.y).powf(2.)
-                        + (ray.origin.z - position.z).powf(2.) < radius.powf(2.) {
-                        intersection = true;
-                        break 'a;
-                    }
+    for object in scene.objects.iter() {
+        match object {
+            Object::Sphere { radius, center } => {
+                let center = *center;
+                // considering the determinant is b^2-4ac
+                // a = d . d
+                // b = 2d . (o - c)
+                // c = (o - c) . (o - c) - r^2
+                let a = ray.direction.len_squared();
+                let b = 2. * ray.direction.dot(ray.origin - center);
+                let c = (ray.origin - center).len_squared() - radius.powi(2);
+                if b.powi(2) - 4. * a * c >= 0. {
+                    intersection = true;
+                    break;
                 }
             }
         }
@@ -148,7 +148,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let scene = Scene {
         objects: vec![Object::Sphere {
             radius: 1.,
-            position: vec3![0., 0., -3.],
+            center: vec3![0., 0., -3.],
         }],
     };
 
