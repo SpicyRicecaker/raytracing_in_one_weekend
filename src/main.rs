@@ -115,20 +115,25 @@ fn lerp(start: Vec3, end: Vec3, x: f64) -> Vec3 {
     (1. - x) * start + x * end
 }
 
+fn hit_sphere(center: Point3, radius: f64, ray: &Ray) -> bool {
+    let oc = ray.origin - center;
+    // considering the determinant is b^2-4ac
+    // a = d . d
+    // b = 2d . (o - c)
+    // c = (o - c) . (o - c) - r^2
+    let a = ray.direction.len_squared();
+    let b = 2. * ray.direction.dot(oc);
+    let c = (oc).len_squared() - radius.powi(2);
+    let discriminant = b.powi(2) - 4. * a * c;
+    discriminant >= 0.
+}
+
 fn ray_color(camera: &Camera, ray: Ray, scene: &Scene) -> Color {
     let mut intersection = false;
     for object in scene.objects.iter() {
         match object {
             Object::Sphere { radius, center } => {
-                let center = *center;
-                // considering the determinant is b^2-4ac
-                // a = d . d
-                // b = 2d . (o - c)
-                // c = (o - c) . (o - c) - r^2
-                let a = ray.direction.len_squared();
-                let b = 2. * ray.direction.dot(ray.origin - center);
-                let c = (ray.origin - center).len_squared() - radius.powi(2);
-                if b.powi(2) - 4. * a * c >= 0. {
+                if hit_sphere(*center, *radius, &ray) {
                     intersection = true;
                     break;
                 }
