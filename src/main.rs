@@ -23,6 +23,10 @@ enum Object {
     Sphere { radius: f64, center: Vec3 },
 }
 
+struct ObjectProps {}
+
+pub trait Hittable {}
+
 #[derive(Debug)]
 struct Camera {
     aspect_ratio: f64,
@@ -115,7 +119,7 @@ fn lerp(start: Vec3, end: Vec3, x: f64) -> Vec3 {
     (1. - x) * start + x * end
 }
 
-fn hit_sphere_point(center: Point3, radius: f64, ray: &Ray) -> Option<Color> {
+fn hit_sphere_point(center: Point3, radius: f64, ray: &Ray) -> Option<Point3> {
     let oc = ray.origin - center;
     // considering the determinant is b^2-4ac
     // a = d . d
@@ -123,18 +127,14 @@ fn hit_sphere_point(center: Point3, radius: f64, ray: &Ray) -> Option<Color> {
     // c = (o - c) . (o - c) - r^2
     // (-b +- sqrt (b^2 - 4ac)) / 2a
     let a = ray.direction.len_squared();
-    let b = 2. * ray.direction.dot(oc);
+    let half_b = ray.direction.dot(oc);
     let c = (oc).len_squared() - radius.powi(2);
-    let discriminant = b.powi(2) - 4. * a * c;
+    let discriminant = half_b.powi(2) - a * c;
     if discriminant >= 0. {
         // find smallest t
-        let t = (-b - discriminant.sqrt()) / (2. * a);
+        let t = (-half_b - discriminant.sqrt()) / a;
         let intersection = ray.origin + ray.direction * t;
-        // note: all normals are normalized
-        let normal = (-center + intersection) / radius;
-        // now move everything to a range of 0 to 1 and return the color
-        let color = (normal + vec3![1., 1., 1.]) / 2.;
-        Some(color)
+        Some(intersection)
     } else {
         None
     }
@@ -145,8 +145,12 @@ fn ray_color(camera: &Camera, ray: Ray, scene: &Scene) -> Color {
     for object in scene.objects.iter() {
         match object {
             Object::Sphere { radius, center } => {
-                if let Some(c) = hit_sphere_point(*center, *radius, &ray) {
-                    color = Some(c);
+                if let Some(intersection) = hit_sphere_point(*center, *radius, &ray) {
+                    // note: all normals are normalized
+                    let normal = (-*center + intersection) / *radius;
+                    // now move everything to a range of 0 to 1 and return the color
+                    let normalized_color = (normal + vec3![1., 1., 1.]) / 2.;
+                    color = Some(normalized_color);
                     break;
                 }
             }
