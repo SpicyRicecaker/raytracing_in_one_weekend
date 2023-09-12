@@ -115,33 +115,45 @@ fn lerp(start: Vec3, end: Vec3, x: f64) -> Vec3 {
     (1. - x) * start + x * end
 }
 
-fn hit_sphere(center: Point3, radius: f64, ray: &Ray) -> bool {
+fn hit_sphere_point(center: Point3, radius: f64, ray: &Ray) -> Option<Color> {
     let oc = ray.origin - center;
     // considering the determinant is b^2-4ac
     // a = d . d
     // b = 2d . (o - c)
     // c = (o - c) . (o - c) - r^2
+    // (-b +- sqrt (b^2 - 4ac)) / 2a
     let a = ray.direction.len_squared();
     let b = 2. * ray.direction.dot(oc);
     let c = (oc).len_squared() - radius.powi(2);
     let discriminant = b.powi(2) - 4. * a * c;
-    discriminant >= 0.
+    if discriminant >= 0. {
+        // find smallest t
+        let t = (-b - discriminant.sqrt()) / (2. * a);
+        let intersection = ray.origin + ray.direction * t;
+        // note: all normals are normalized
+        let normal = (-center + intersection) / radius;
+        // now move everything to a range of 0 to 1 and return the color
+        let color = (normal + vec3![1., 1., 1.]) / 2.;
+        Some(color)
+    } else {
+        None
+    }
 }
 
 fn ray_color(camera: &Camera, ray: Ray, scene: &Scene) -> Color {
-    let mut intersection = false;
+    let mut color = None;
     for object in scene.objects.iter() {
         match object {
             Object::Sphere { radius, center } => {
-                if hit_sphere(*center, *radius, &ray) {
-                    intersection = true;
+                if let Some(c) = hit_sphere_point(*center, *radius, &ray) {
+                    color = Some(c);
                     break;
                 }
             }
         }
     }
-    if intersection {
-        vec3![1., 1., 1.]
+    if let Some(color) = color {
+        color
     } else {
         vec3![0., 0., 0.]
     }
