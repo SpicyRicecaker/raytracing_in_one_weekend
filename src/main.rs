@@ -1,5 +1,6 @@
 use std::fmt::Write;
 use std::fs;
+use std::time::Instant;
 
 use log::info;
 
@@ -13,6 +14,14 @@ use raytracing_in_one_weekend::ray::Ray;
 use raytracing_in_one_weekend::vec::*;
 use raytracing_in_one_weekend::vec3;
 use raytracing_in_one_weekend::Error;
+
+struct Scene {
+    objects: Vec<Object>,
+}
+
+enum Object {
+    Sphere { radius: f64, position: Vec3 },
+}
 
 #[derive(Debug)]
 struct Camera {
@@ -53,7 +62,7 @@ impl Camera {
         }
     }
 
-    fn raycast(&self) -> Result<(), Box<dyn Error>> {
+    fn raycast(&self, scene: &Scene) -> Result<(), Box<dyn Error>> {
         // create a 256x256 image in ppm (lossless) format which goes from black to red for the first row (0->255)
         // then for every progressive row a green is added (0->255)
 
@@ -77,6 +86,8 @@ impl Camera {
 
         let pixel_00_loc = viewport_upper_left + pixel_delta_u / 2. + pixel_delta_v / 2.;
 
+        let DBG_instant = Instant::now();
+
         for y in 0..self.image_height {
             for x in 0..self.image_width {
                 info!("scanlines remaining: {}", self.image_height - y);
@@ -86,10 +97,12 @@ impl Camera {
                     origin: current_pixel_center,
                     direction: -self.eye + current_pixel_center,
                 };
-                let color = ray_color(self, ray);
+                let color = ray_color(self, ray, scene);
                 write_color(&mut buf, color)?;
             }
         }
+
+        dbg!(DBG_instant.elapsed());
 
         // write the buffer to a ppm file
         fs::write("image.ppm", buf)?;
@@ -102,19 +115,45 @@ fn lerp(start: Vec3, end: Vec3, x: f64) -> Vec3 {
     (1. - x) * start + x * end
 }
 
-fn ray_color(camera: &Camera, ray: Ray) -> Color {
-    // a linear gradient from white to blue
-    let a = (ray.direction.normalized().y + 1.) / 2.;
-    let white_start = vec3![1., 1., 1.];
-    let blue_end = vec3![0.5, 0.7, 1.];
-    lerp(white_start, blue_end, a)
+fn ray_color(camera: &Camera, mut ray: Ray, scene: &Scene) -> Color {
+    let mut distance_left: f64 = 10.;
+    let step = 0.01;
+    let mut intersection = false;
+    'a: while distance_left > 0. {
+        ray.origin += ray.direction.normalized() * step;
+        distance_left -= step;
+        for object in scene.objects.iter() {
+            match object {
+                Object::Sphere { radius, position } => {
+                    if (ray.origin.x - position.x).powf(2.)
+                        + (ray.origin.y - position.y).powf(2.)
+                        + (ray.origin.z - position.z).powf(2.) < radius.powf(2.) {
+                        intersection = true;
+                        break 'a;
+                    }
+                }
+            }
+        }
+    }
+    if intersection {
+        vec3![1., 1., 1.]
+    } else {
+        vec3![0., 0., 0.]
+    }
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
     env_logger::init();
 
+    let scene = Scene {
+        objects: vec![Object::Sphere {
+            radius: 1.,
+            position: vec3![0., 0., -3.],
+        }],
+    };
+
     let camera = Camera::new(IMAGE_WIDTH, ASPECT_RATIO, VIEWPORT_HEIGHT);
-    camera.raycast()?;
+    camera.raycast(&scene)?;
 
     Ok(())
 }
