@@ -3,6 +3,8 @@ use std::ops;
 #[macro_export]
 macro_rules! vec3 {
     ($x:expr, $y:expr, $z: expr) => {{
+        use $crate::vec::Vec3;
+
         Vec3 {
             x: $x,
             y: $y,
@@ -13,7 +15,7 @@ macro_rules! vec3 {
 
 pub type Point3 = Vec3;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct Vec3 {
     pub x: f64,
     pub y: f64,

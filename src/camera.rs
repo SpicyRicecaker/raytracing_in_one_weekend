@@ -5,8 +5,10 @@ use log::info;
 use std::fmt::Write;
 use std::error::Error;
 
+use crate::Object;
 use crate::Scene;
 use crate::color::write_color;
+use crate::hittable::Hittable;
 use crate::ray::Ray;
 use crate::ray::ray_color;
 use crate::vec::*;
@@ -51,7 +53,7 @@ impl Camera {
         }
     }
 
-    pub fn raycast(&self, scene: &mut Scene) -> Result<(), Box<dyn Error>> {
+    pub fn raycast_all(&self, scene: &mut Scene) -> Result<(), Box<dyn Error>> {
         // create a 256x256 image in ppm (lossless) format which goes from black to red for the first row (0->255)
         // then for every progressive row a green is added (0->255)
 
@@ -86,7 +88,19 @@ impl Camera {
                     origin: current_pixel_center,
                     direction: -self.eye + current_pixel_center,
                 };
-                let color = ray_color(self, ray, scene);
+                // first hit every object using the ray
+                // TODO the hit code definitely has to be changed to account for
+                // multiple rays hitting the same part of the object .
+                // isn't this algorithm n^2?
+                let mut hit = false;
+                for object in scene.objects.iter_mut() {
+                    hit = hit || Object::hit(&ray, 0.0..999., &mut object.hit_record, &mut object.object_type);
+                }
+                let mut color = vec3![0., 0., 0.];
+                if hit {
+                    color = ray_color(self, ray, scene);
+                }
+
                 write_color(&mut buf, color)?;
             }
         }

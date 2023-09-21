@@ -4,7 +4,9 @@ use crate::color::*;
 use crate::ray::*;
 use crate::vec::*;
 use crate::Object;
+use crate::ObjectType;
 
+#[derive(Debug, Default)]
 pub struct HitRecord {
     /// The point of intersection between ray and object
     pub p: Point3,
@@ -15,22 +17,33 @@ pub struct HitRecord {
 }
 
 impl Hittable for Object {
-    fn hit(&mut self, ray: &Ray, ray_range: Range<f64>, hit_record: &mut HitRecord) {
-        match self {
-            Object::Sphere {
-                radius,
-                center,
-                hit_record,
-            } => {
-                if let Some(t) = hit_sphere(*center, *radius, ray) {
-                    let p = ray.origin + ray.direction * t;
-                    let normal = (-*center + p) / *radius;
-                    *hit_record = HitRecord {
-                        t,
-                        p,
-                        normal
+    /// really weird here that we're basically unpacking the struct into the
+    /// function, but hey, it's better than getters and setters and also not
+    /// having a trait.
+    ///
+    /// actually, wonder if keeping the enum is just better than this.
+    fn hit(
+        ray: &Ray,
+        ray_range: Range<f64>,
+        hit_record: &mut Option<HitRecord>,
+        object_type: &mut ObjectType,
+    ) -> bool {
+        match *object_type {
+            ObjectType::Sphere { radius, center } => {
+                if let Some(t) = hit_sphere(center, radius, ray) {
+                    if ray_range.contains(&t) {
+                        // where p = point of intersection
+                        let p = ray.origin + ray.direction * t;
+                        // the normal of a sphere is radiated out from the center to
+                        // the intersection point always
+                        let normal = (-center + p) / radius;
+                        *hit_record = Some(HitRecord { t, p, normal });
+                        true
+                    } else {
+                        false
                     }
-                
+                } else {
+                    false
                 }
             }
         }
@@ -61,5 +74,10 @@ pub fn hit_sphere(center: Point3, radius: f64, ray: &Ray) -> Option<f64> {
 /// simply store hit info for all objects for a specific ray (potentially lots
 /// of mutations)
 pub trait Hittable {
-    fn hit(&mut self, ray: &Ray, ray_range: Range<f64>, hit_record: &mut HitRecord);
+    fn hit(
+        ray: &Ray,
+        ray_range: Range<f64>,
+        hit_record: &mut Option<HitRecord>,
+        object_type: &mut ObjectType,
+    ) -> bool;
 }
