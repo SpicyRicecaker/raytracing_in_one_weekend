@@ -6,12 +6,10 @@ use std::error::Error;
 use std::fmt::Write;
 
 use crate::color::write_color;
-use crate::hittable::Hittable;
 use crate::ray::ray_color;
 use crate::ray::Ray;
 use crate::vec::*;
 use crate::vec3;
-use crate::Object;
 use crate::Scene;
 
 #[derive(Debug)]
@@ -92,20 +90,8 @@ impl Camera {
                 // TODO the hit code definitely has to be changed to account for
                 // multiple rays hitting the same part of the object .
                 // isn't this algorithm n^2?
-                let mut hit = false;
-                for object in scene.objects.iter_mut() {
-                    hit = hit
-                        || Object::hit(
-                            &ray,
-                            0.0..999.,
-                            &mut object.hit_record,
-                            &mut object.object_type,
-                        );
-                }
-                let mut color = vec3![0., 0., 0.];
-                if hit {
-                    color = ray_color(self, ray, scene);
-                }
+
+                let color = ray_color(&ray, scene);
 
                 write_color(&mut buf, color)?;
             }

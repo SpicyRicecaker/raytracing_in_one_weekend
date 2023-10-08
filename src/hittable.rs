@@ -1,19 +1,47 @@
 use std::ops::Range;
 
-use crate::color::*;
 use crate::ray::*;
 use crate::vec::*;
 use crate::Object;
 use crate::ObjectType;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone, Copy)]
 pub struct HitRecord {
     /// The point of intersection between ray and object
     pub p: Point3,
     /// The normal of the surface at the point of intersection
+    /// - We decided to always point it against the ray, and this is calculated
+    /// at "geometry" (i.e. ray bouncing) time
     pub normal: Vec3,
     /// The `t` multiplier of the ray's direction vector
     pub t: f64,
+    /// Whether or not the ray hit the object's surface from the outside or from
+    /// the inside
+    pub front_face: bool,
+}
+
+impl HitRecord {
+    pub fn new(p: Point3, t: f64, outward_normal: Vec3, ray: &Ray) -> Self {
+        let (front_face, normal) = HitRecord::get_face_normal(outward_normal, ray);
+
+        HitRecord {
+            t,
+            p,
+            normal,
+            front_face,
+        }
+    }
+
+    pub fn get_face_normal(outward_normal: Vec3, ray: &Ray) -> (bool, Vec3) {
+        // if we hit it from the outside, we can keep the current normal
+        // otherwise, we have to reverse the direction of the normal
+        let front_face = outward_normal.dot(ray.direction) <= 0.;
+        if !front_face {
+            (false, -outward_normal)
+        } else {
+            (true, outward_normal)
+        }
+    }
 }
 
 impl Hittable for Object {
@@ -22,16 +50,9 @@ impl Hittable for Object {
     /// having a trait.
     ///
     /// actually, wonder if keeping the enum is just better than this.
-    fn hit(
-        ray: &Ray,
-        ray_range: Range<f64>,
-        hit_record: &mut Option<HitRecord>,
-        object_type: &mut ObjectType,
-    ) -> bool {
+    fn hit(ray: &Ray, ray_range: Range<f64>, object_type: &ObjectType) -> Option<HitRecord> {
         match *object_type {
-            ObjectType::Sphere { radius, center } => {
-                hit_sphere(center, radius, ray, ray_range, hit_record)
-            }
+            ObjectType::Sphere { radius, center } => hit_sphere(center, radius, ray, ray_range),
         }
     }
 }
@@ -41,8 +62,7 @@ pub fn hit_sphere(
     radius: f64,
     ray: &Ray,
     ray_range: Range<f64>,
-    hit_record: &mut Option<HitRecord>,
-) -> bool {
+) -> Option<HitRecord> {
     let oc = ray.origin - center;
     // considering the determinant is b^2-4ac
     // a = d . d
@@ -83,28 +103,21 @@ pub fn hit_sphere(
             ];
             // note: map is lazy by default, so the t will be calculated "just
             // in time" for each iteration of find
-            let in_range_root = possible_roots
+            possible_roots
                 .into_iter()
                 .map(|t| t())
-                .find(|t| ray_range.contains(t));
-
-            if let Some(in_range_root) = in_range_root {
-                in_range_root
-            } else {
-                return false;
-            }
+                .find(|t| ray_range.contains(t))?
         };
 
         // where p = point of intersection
         let p = ray.origin + ray.direction * t;
         // the normal of a sphere is radiated out from the center to
         // the intersection point always
-        let normal = (-center + p) / radius;
-        *hit_record = Some(HitRecord { t, p, normal });
+        let outward_normal = (-center + p) / radius;
 
-        true
+        Some(HitRecord::new(p, t, outward_normal, ray))
     } else {
-        false
+        None
     }
 }
 
@@ -112,10 +125,5 @@ pub fn hit_sphere(
 /// simply store hit info for all objects for a specific ray (potentially lots
 /// of mutations)
 pub trait Hittable {
-    fn hit(
-        ray: &Ray,
-        ray_range: Range<f64>,
-        hit_record: &mut Option<HitRecord>,
-        object_type: &mut ObjectType,
-    ) -> bool;
+    fn hit(ray: &Ray, ray_range: Range<f64>, object_type: &ObjectType) -> Option<HitRecord>;
 }

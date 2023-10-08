@@ -1,6 +1,7 @@
-use crate::hittable::{hit_sphere, Hittable};
-use crate::{camera::Camera, color::Color, vec::*, Object, Scene};
-use crate::{vec3, ObjectType};
+use std::f64::MAX;
+
+use crate::vec3;
+use crate::{color::Color, vec::*, Scene};
 
 pub struct Ray {
     pub origin: Vec3,
@@ -14,27 +15,11 @@ impl Ray {
     }
 }
 
-pub fn ray_color(camera: &Camera, ray: Ray, scene: &mut Scene) -> Color {
-    let mut color = None;
-    for object in scene.objects.iter_mut() {
-        if let Some(hit_record) = object.hit_record.as_mut() {
-            // if on outside
-            if hit_record.normal.dot(ray.direction) <= 0. {
-                // now move everything to a range of 0 to 1 and return the color
-                let normalized_color = (hit_record.normal + vec3![1., 1., 1.]) / 2.;
-                color = Some(normalized_color);
-            } else {
-                let normalized_color = (hit_record.normal + vec3![1., 1., 1.]) / 2.;
-                // 25% opacity
-                // let normalized_color = normalized_color;
-                color = Some(normalized_color);
-            }
-        }
-    }
-    if let Some(color) = color {
-        color
+pub fn ray_color(ray: &Ray, scene: &mut Scene) -> Color {
+    if let Some(hit_record) = scene.hit(ray, 0.0..MAX) {
+        // now move everything to a range of 0 to 1 and return the color
+        (hit_record.normal + vec3![1., 1., 1.]) / 2.
     } else {
-        // linear blue gradient based on screen position
         vec3![0., 0., 0.]
     }
 }
