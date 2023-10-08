@@ -30,43 +30,80 @@ impl Hittable for Object {
     ) -> bool {
         match *object_type {
             ObjectType::Sphere { radius, center } => {
-                if let Some(t) = hit_sphere(center, radius, ray) {
-                    if ray_range.contains(&t) {
-                        // where p = point of intersection
-                        let p = ray.origin + ray.direction * t;
-                        // the normal of a sphere is radiated out from the center to
-                        // the intersection point always
-                        let normal = (-center + p) / radius;
-                        *hit_record = Some(HitRecord { t, p, normal });
-                        true
-                    } else {
-                        false
-                    }
-                } else {
-                    false
-                }
+                hit_sphere(center, radius, ray, ray_range, hit_record)
             }
         }
     }
 }
 
-pub fn hit_sphere(center: Point3, radius: f64, ray: &Ray) -> Option<f64> {
+pub fn hit_sphere(
+    center: Point3,
+    radius: f64,
+    ray: &Ray,
+    ray_range: Range<f64>,
+    hit_record: &mut Option<HitRecord>,
+) -> bool {
     let oc = ray.origin - center;
     // considering the determinant is b^2-4ac
     // a = d . d
     // b = 2d . (o - c)
     // c = (o - c) . (o - c) - r^2
     // (-b +- sqrt (b^2 - 4ac)) / 2a
+
+    // okay, but why do we use half_b again?
+    // just to simplify the operations.
+    // if b = 2h,
+    // (-2h +- sqrt(4h^2 - 4ac)) / 2a
+    // (-h +- sqrt(h^2-ac)) / a
+
     let a = ray.direction.len_squared();
     let half_b = ray.direction.dot(oc);
     let c = (oc).len_squared() - radius.powi(2);
     let discriminant = half_b.powi(2) - a * c;
     if discriminant >= 0. {
-        // find smallest t
-        let t = (-half_b - discriminant.sqrt()) / a;
-        Some(t)
+        // how do we find the smallest t within the range?
+        // find both values of t
+        // filter the ones that satisfy the range
+        //   if the filtered array is none return
+        // then grab the smallest
+        // isn't the t with - guaranteed to be the smallest root?
+        //   okay, not if it doesn't satisfy the range
+
+        // what's a more efficient algorithm?
+        //   compute the first root, and if it satisfies the range keep it
+        //   compute the second root, and if it satisfies the range keep it
+        //   otherwise, if none of the roots satisfy the equation return nothing
+
+        let discriminant_root = discriminant.sqrt();
+
+        let t = {
+            let possible_roots: [Box<dyn Fn() -> f64>; 2] = [
+                Box::new(|| (-half_b - discriminant_root) / a),
+                Box::new(|| (-half_b + discriminant_root) / a),
+            ];
+            // note: map is lazy by default, so the t will be calculated "just
+            // in time" for each iteration of find
+            let in_range_root = possible_roots.into_iter().map(|t| t()).find(|t| {
+                ray_range.contains(t)
+            });
+            
+            if let Some(in_range_root) = in_range_root {
+                in_range_root
+            } else {
+                return false;
+            }   
+        };
+
+        // where p = point of intersection
+        let p = ray.origin + ray.direction * t;
+        // the normal of a sphere is radiated out from the center to
+        // the intersection point always
+        let normal = (-center + p) / radius;
+        *hit_record = Some(HitRecord { t, p, normal });
+
+        true
     } else {
-        None
+        false
     }
 }
 
