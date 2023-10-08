@@ -1,18 +1,18 @@
-use std::time::Instant;
 use std::fs;
+use std::time::Instant;
 
 use log::info;
-use std::fmt::Write;
 use std::error::Error;
+use std::fmt::Write;
 
-use crate::Object;
-use crate::Scene;
 use crate::color::write_color;
 use crate::hittable::Hittable;
-use crate::ray::Ray;
 use crate::ray::ray_color;
+use crate::ray::Ray;
 use crate::vec::*;
 use crate::vec3;
+use crate::Object;
+use crate::Scene;
 
 #[derive(Debug)]
 pub struct Camera {
@@ -94,7 +94,13 @@ impl Camera {
                 // isn't this algorithm n^2?
                 let mut hit = false;
                 for object in scene.objects.iter_mut() {
-                    hit = hit || Object::hit(&ray, 0.0..999., &mut object.hit_record, &mut object.object_type);
+                    hit = hit
+                        || Object::hit(
+                            &ray,
+                            0.0..999.,
+                            &mut object.hit_record,
+                            &mut object.object_type,
+                        );
                 }
                 let mut color = vec3![0., 0., 0.];
                 if hit {

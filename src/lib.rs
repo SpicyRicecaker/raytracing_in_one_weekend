@@ -1,8 +1,8 @@
+pub mod camera;
 pub mod color;
+pub mod hittable;
 pub mod ray;
 pub mod vec;
-pub mod hittable;
-pub mod camera;
 
 pub use std::error::Error;
 
@@ -15,7 +15,7 @@ pub struct Object {
 }
 
 pub enum ObjectType {
-    Sphere { radius: f64, center: Vec3}
+    Sphere { radius: f64, center: Vec3 },
 }
 
 pub fn lerp(start: Vec3, end: Vec3, x: f64) -> Vec3 {

@@ -83,15 +83,16 @@ pub fn hit_sphere(
             ];
             // note: map is lazy by default, so the t will be calculated "just
             // in time" for each iteration of find
-            let in_range_root = possible_roots.into_iter().map(|t| t()).find(|t| {
-                ray_range.contains(t)
-            });
-            
+            let in_range_root = possible_roots
+                .into_iter()
+                .map(|t| t())
+                .find(|t| ray_range.contains(t));
+
             if let Some(in_range_root) = in_range_root {
                 in_range_root
             } else {
                 return false;
-            }   
+            }
         };
 
         // where p = point of intersection
