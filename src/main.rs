@@ -18,13 +18,13 @@ fn main() -> Result<(), Box<dyn Error>> {
         },
         hit_record: None,
     });
-    scene.add(Object {
-        object_type: ObjectType::Sphere {
-            radius: 100.,
-            center: vec3![0., -100.5, -1.],
-        },
-        hit_record: None,
-    });
+    // scene.add(Object {
+    //     object_type: ObjectType::Sphere {
+    //         radius: 100.,
+    //         center: vec3![0., -100.5, -1.],
+    //     },
+    //     hit_record: None,
+    // });
 
     let camera = Camera::new(IMAGE_WIDTH, ASPECT_RATIO, VIEWPORT_HEIGHT);
     camera.raycast_all(&mut scene)?;

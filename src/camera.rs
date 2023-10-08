@@ -35,9 +35,9 @@ impl Camera {
 
         let eye = vec3![0., 0., 0.];
         // arbitrarily define the camera direction as moving in the -z direction
-        let camera_direction = vec3![0., 0., -1.];
+        let eye_direction = vec3![0., 0., -1.];
         // we also need to define the camera normal so that we can know where the viewport plane is.
-        let focal_length = 1.;
+        let focal_length = 0.1;
 
         Self {
             aspect_ratio,
@@ -46,7 +46,7 @@ impl Camera {
             viewport_width,
             viewport_height,
             eye,
-            eye_direction: camera_direction,
+            eye_direction,
             focal_length,
         }
     }
@@ -91,7 +91,7 @@ impl Camera {
                 // multiple rays hitting the same part of the object .
                 // isn't this algorithm n^2?
 
-                let color = ray_color(&ray, scene);
+                let color = ray_color(self, &ray, scene);
 
                 write_color(&mut buf, color)?;
             }

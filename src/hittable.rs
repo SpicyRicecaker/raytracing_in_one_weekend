@@ -22,21 +22,20 @@ pub struct HitRecord {
 
 impl HitRecord {
     pub fn new(p: Point3, t: f64, outward_normal: Vec3, ray: &Ray) -> Self {
-        let (front_face, normal) = HitRecord::get_face_normal(outward_normal, ray);
+        // let (front_face, normal) = HitRecord::get_face_normal(outward_normal, ray);
 
         HitRecord {
             t,
             p,
-            normal,
-            front_face,
+            normal: outward_normal,
+            front_face: true,
         }
     }
 
     pub fn get_face_normal(outward_normal: Vec3, ray: &Ray) -> (bool, Vec3) {
-        // if we hit it from the outside, we can keep the current normal
-        // otherwise, we have to reverse the direction of the normal
-        let front_face = outward_normal.dot(ray.direction) <= 0.;
-        if !front_face {
+        // if the dot product is > 0, the ray is coming from inside the object
+        // if the dot product is < 0, the ray is coming from outside the object
+        if outward_normal.dot(ray.direction) > 0. {
             (false, -outward_normal)
         } else {
             (true, outward_normal)
@@ -63,7 +62,6 @@ pub fn hit_sphere(
     ray: &Ray,
     ray_range: Range<f64>,
 ) -> Option<HitRecord> {
-    let oc = ray.origin - center;
     // considering the determinant is b^2-4ac
     // a = d . d
     // b = 2d . (o - c)
@@ -76,10 +74,12 @@ pub fn hit_sphere(
     // (-2h +- sqrt(4h^2 - 4ac)) / 2a
     // (-h +- sqrt(h^2-ac)) / a
 
+    let oc = ray.origin - center;
     let a = ray.direction.len_squared();
     let half_b = ray.direction.dot(oc);
     let c = (oc).len_squared() - radius.powi(2);
     let discriminant = half_b.powi(2) - a * c;
+
     if discriminant >= 0. {
         // how do we find the smallest t within the range?
         // find both values of t
