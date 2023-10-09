@@ -35,11 +35,10 @@ impl HitRecord {
     pub fn get_face_normal(outward_normal: Vec3, ray: &Ray) -> (bool, Vec3) {
         // if we hit it from the outside, we can keep the current normal
         // otherwise, we have to reverse the direction of the normal
-        let front_face = outward_normal.dot(ray.direction) <= 0.;
-        if !front_face {
-            (false, -outward_normal)
-        } else {
+        if outward_normal.dot(ray.direction) <= 0. {
             (true, outward_normal)
+        } else {
+            (false, -outward_normal)
         }
     }
 }

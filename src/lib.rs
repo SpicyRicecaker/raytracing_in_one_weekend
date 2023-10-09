@@ -48,8 +48,10 @@ impl Scene {
             if let Some(t_hit_record) = Object::hit(ray, ray_range.clone(), &o.as_ref().borrow().object_type) {
                 hit_record = Some(t_hit_record);
 
-                // simply get the closest object for now
-                ray_range.start = t_hit_record.t;
+                // the bigger the t is, the farther away the object. Therefore
+                // to only accept the closest object we should cap the t value
+                // at the current t
+                ray_range.end = t_hit_record.t;
             }
         });
 

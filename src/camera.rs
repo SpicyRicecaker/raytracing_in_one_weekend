@@ -35,7 +35,7 @@ impl Camera {
 
         let eye = vec3![0., 0., 0.];
         // arbitrarily define the camera direction as moving in the -z direction
-        let camera_direction = vec3![0., 0., -1.];
+        let eye_direction = vec3![0., 0., -1.];
         // we also need to define the camera normal so that we can know where the viewport plane is.
         let focal_length = 1.;
 
@@ -46,7 +46,7 @@ impl Camera {
             viewport_width,
             viewport_height,
             eye,
-            eye_direction: camera_direction,
+            eye_direction,
             focal_length,
         }
     }
@@ -83,7 +83,7 @@ impl Camera {
                 let current_pixel_center =
                     pixel_00_loc + y as f64 * pixel_delta_v + x as f64 * pixel_delta_u;
                 let ray = Ray {
-                    origin: current_pixel_center,
+                    origin: self.eye,
                     direction: -self.eye + current_pixel_center,
                 };
                 // first hit every object using the ray
