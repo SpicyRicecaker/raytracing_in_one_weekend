@@ -40,8 +40,8 @@ impl Vec3 {
     }
     pub fn cross(&self, rhs: Vec3) -> Vec3 {
         vec3![
-            self.y * rhs.z - rhs.y * self.z,
-            rhs.x * self.z -  self.x * rhs.z,
+            self.y * rhs.z - rhs.y - self.z,
+            self.x * rhs.z - rhs.x * self.z,
             self.x * rhs.y - rhs.x * self.y
         ]
     }

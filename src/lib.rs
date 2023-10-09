@@ -5,7 +5,11 @@ pub mod ray;
 pub mod vec;
 
 pub use std::error::Error;
-use std::{cell::RefCell, ops::Range, rc::Rc};
+use std::{
+    cell::RefCell,
+    ops::Range,
+    rc::Rc,
+};
 
 use hittable::{HitRecord, Hittable};
 use ray::Ray;
@@ -16,7 +20,6 @@ pub struct Object {
     pub object_type: ObjectType,
 }
 
-#[derive(Debug)]
 pub enum ObjectType {
     Sphere { radius: f64, center: Vec3 },
 }
@@ -42,9 +45,7 @@ impl Scene {
 
         // # of objects is usually small for our raytracer
         self.objects.iter().for_each(|o| {
-            if let Some(t_hit_record) =
-                Object::hit(ray, ray_range.clone(), &o.as_ref().borrow().object_type)
-            {
+            if let Some(t_hit_record) = Object::hit(ray, ray_range.clone(), &o.as_ref().borrow().object_type) {
                 hit_record = Some(t_hit_record);
 
                 // simply get the closest object for now
