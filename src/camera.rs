@@ -1,3 +1,4 @@
+use std::f64::MAX;
 use std::fs;
 use std::time::Instant;
 
@@ -6,7 +7,8 @@ use std::error::Error;
 use std::fmt::Write;
 
 use crate::color::write_color;
-use crate::ray::ray_color;
+use crate::color::Color;
+use crate::random_double;
 use crate::ray::Ray;
 use crate::vec::*;
 use crate::vec3;
@@ -22,6 +24,7 @@ pub struct Camera {
     pub eye: Point3,
     pub eye_direction: Vec3,
     pub focal_length: f64,
+    pub samples_per_pixel: u32,
 }
 
 impl Camera {
@@ -39,6 +42,8 @@ impl Camera {
         // we also need to define the camera normal so that we can know where the viewport plane is.
         let focal_length = 1.;
 
+        let samples_per_pixel = 10;
+
         Self {
             aspect_ratio,
             image_width,
@@ -48,10 +53,11 @@ impl Camera {
             eye,
             eye_direction,
             focal_length,
+            samples_per_pixel
         }
     }
 
-    pub fn raycast_all(&self, scene: &mut Scene) -> Result<(), Box<dyn Error>> {
+    pub fn render(&self, scene: &mut Scene) -> Result<(), Box<dyn Error>> {
         // create a 256x256 image in ppm (lossless) format which goes from black to red for the first row (0->255)
         // then for every progressive row a green is added (0->255)
 
@@ -79,21 +85,35 @@ impl Camera {
 
         for y in 0..self.image_height {
             for x in 0..self.image_width {
+                let mut total_color = vec3![0., 0., 0.];
                 info!("scanlines remaining: {}", self.image_height - y);
+
+                // Note: a pixel is a point in space
                 let current_pixel_center =
                     pixel_00_loc + y as f64 * pixel_delta_v + x as f64 * pixel_delta_u;
-                let ray = Ray {
-                    origin: self.eye,
-                    direction: -self.eye + current_pixel_center,
-                };
-                // first hit every object using the ray
-                // TODO the hit code definitely has to be changed to account for
-                // multiple rays hitting the same part of the object .
-                // isn't this algorithm n^2?
 
-                let color = ray_color(&ray, scene);
+                for _ in 0..self.samples_per_pixel {
+                    // we need a number between -pixel_delta_u/2 and +pixel_delta_u/2 to add to the pixel x
+                    let dx = random_double(-0.5..=0.5);
+                    // we need a number between -pixel_delta_v/2 and +pixel_delta_v/2 to add to the pixel y
+                    let dy = random_double(-0.5..=0.5);
 
-                write_color(&mut buf, color)?;
+                    let sample_pixel = current_pixel_center + pixel_delta_u * dx + pixel_delta_v * dy;
+
+                    // generate a random number between -pixel_delta_u and +pixel_delta_u
+                    let ray = Ray {
+                        origin: self.eye,
+                        direction: -self.eye + sample_pixel,
+                    };
+                    // first hit every object using the ray
+                    // TODO the hit code definitely has to be changed to account for
+                    // multiple rays hitting the same part of the object .
+                    // isn't this algorithm n^2?
+
+                    total_color += Self::ray_color(&ray, scene);
+                }
+                // divide color by num samples, clamp at 1
+                write_color(&mut buf, total_color, self.samples_per_pixel)?;
             }
         }
 
@@ -103,5 +123,13 @@ impl Camera {
         fs::write("image.ppm", buf)?;
 
         Ok(())
+    }
+    pub fn ray_color(ray: &Ray, scene: &mut Scene) -> Color {
+        if let Some(hit_record) = scene.hit(ray, 0.0..MAX) {
+            // now move everything to a range of 0 to 1 and return the color
+            (hit_record.normal + vec3![1., 1., 1.]) / 2.
+        } else {
+            vec3![0., 0., 0.]
+        }
     }
 }

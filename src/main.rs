@@ -3,6 +3,10 @@ const ASPECT_RATIO: f64 = 16. / 9.;
 const VIEWPORT_HEIGHT: f64 = 2.;
 // const IMAGE_HEIGHT: u32 = 256;
 
+use std::ops::RangeBounds;
+
+use rand::distributions::uniform::SampleRange;
+use rand::{thread_rng, Rng};
 use raytracing_in_one_weekend::camera::*;
 use raytracing_in_one_weekend::*;
 
@@ -26,8 +30,10 @@ fn main() -> Result<(), Box<dyn Error>> {
         hit_record: None,
     });
 
+    // // return a random f64
+
     let camera = Camera::new(IMAGE_WIDTH, ASPECT_RATIO, VIEWPORT_HEIGHT);
-    camera.raycast_all(&mut scene)?;
+    camera.render(&mut scene)?;
 
     Ok(())
 }

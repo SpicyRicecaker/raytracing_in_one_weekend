@@ -45,6 +45,13 @@ impl Vec3 {
             self.x * rhs.y - rhs.x * self.y
         ]
     }
+    pub fn clamp(&self, min: f64, max: f64) -> Vec3 {
+        vec3![
+            self.x.clamp(min, max),
+            self.y.clamp(min, max),
+            self.z.clamp(min, max)
+        ]
+    }
 }
 
 impl ops::Neg for Vec3 {

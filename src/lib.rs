@@ -7,11 +7,12 @@ pub mod vec;
 pub use std::error::Error;
 use std::{
     cell::RefCell,
-    ops::Range,
+    ops::{Range, RangeBounds},
     rc::Rc,
 };
 
 use hittable::{HitRecord, Hittable};
+use rand::{thread_rng, distributions::uniform::SampleRange, Rng};
 use ray::Ray;
 use vec::Vec3;
 
@@ -57,4 +58,10 @@ impl Scene {
 
         hit_record
     }
+}
+
+/// TODO: Not sure how expensive reinitializing a thread_rng is. 
+pub fn random_double<R: RangeBounds<f64> + SampleRange<f64> >(range: R) -> f64 {
+    let mut rng = thread_rng();
+    rng.gen_range(range)
 }
