@@ -27,6 +27,7 @@ pub struct Camera {
     pub eye_direction: Vec3,
     pub focal_length: f64,
     pub samples_per_pixel: u32,
+    pub max_depth: u32,
 }
 
 impl Camera {
@@ -46,6 +47,8 @@ impl Camera {
 
         let samples_per_pixel = 100;
 
+        let max_depth = 50;
+
         Self {
             aspect_ratio,
             image_width,
@@ -56,6 +59,7 @@ impl Camera {
             eye_direction,
             focal_length,
             samples_per_pixel,
+            max_depth,
         }
     }
 
@@ -113,7 +117,7 @@ impl Camera {
                     // multiple rays hitting the same part of the object .
                     // isn't this algorithm n^2?
 
-                    total_color += Self::ray_color(&ray, scene, 0);
+                    total_color += Self::ray_color(&ray, scene, self.max_depth);
                 }
                 // divide color by num samples, clamp at 1
                 write_color(&mut buf, total_color, self.samples_per_pixel)?;
@@ -127,25 +131,29 @@ impl Camera {
 
         Ok(())
     }
-    pub fn ray_color(ray: &Ray, scene: &mut Scene, depth: u32) -> Color {
-        if let Some(hit_record) = scene.hit(ray, 0.0..MAX) {
-            // now move everything to a range of 0 to 1 and return the color
-            let direction = random_on_hit_sphere(&hit_record.normal);
-            // each bounce reduces light, attenuation / power droppoff / bounces away
-            0.5 * Self::ray_color(
-                &Ray {
-                    origin: ray.origin,
-                    direction,
-                },
-                scene,
-                depth + 1
-            )
-        } else {
-            let unit_direction: Vec3 = ray.direction.unit_vec();
-            // normalize this to a range of 0 and 1
-            let a = 0.5 * (unit_direction.y + 1.0);
-            // linear interpolation of a with an off-blue color
-            (1.0 - a) * vec3![1.0, 1.0, 1.0] + a * vec3!(0.5, 0.7, 1.0)
+    pub fn ray_color(ray: &Ray, scene: &mut Scene, depth_remaining: u32) -> Color {
+        match (scene.hit(ray, 0.0..MAX), depth_remaining) {
+            (Some(hit_record), d) if d > 0 => {
+                // now move everything to a range of 0 to 1 and return the color
+                let direction = random_on_hemisphere(&hit_record.normal);
+                // each bounce reduces light, attenuation / power droppoff / bounces away
+                0.5 * Self::ray_color(
+                    &Ray {
+                        // INITIATE THE NEW RAY AT THE POINT OF HIT LOL
+                        origin: hit_record.p,
+                        direction,
+                    },
+                    scene,
+                    depth_remaining - 1,
+                )
+            }
+            _ => {
+                let unit_direction: Vec3 = ray.direction.unit_vec();
+                // normalize this to a range of 0 and 1
+                let a = 0.5 * (unit_direction.y + 1.0);
+                // linear interpolation of a with an off-blue color
+                (1.0 - a) * vec3![1.0, 1.0, 1.0] + a * vec3!(0.5, 0.7, 1.0)
+            }
         }
     }
 }
@@ -153,8 +161,9 @@ impl Camera {
 // TODO WIP, generating a random point from a sphere via a sophisticated
 // algorithm is actually very difficult
 // MUCH BETTER THAN LOOP is to simply just take the inverse
-fn random_on_hit_sphere(normal: &Vec3) -> Vec3 {
+fn random_on_hemisphere(normal: &Vec3) -> Vec3 {
     let v = random_unit_vector();
+    // on the same hemisphere as the normal
     if v.dot(*normal) > 0. {
         v
     } else {
@@ -162,6 +171,8 @@ fn random_on_hit_sphere(normal: &Vec3) -> Vec3 {
     }
 }
 
+/// We need this to normalize vectors that starting from the center, do not land
+/// on the *surface* of the sphere
 fn random_unit_vector() -> Vec3 {
     random_vec_in_sphere().unit_vec()
 }
@@ -169,7 +180,11 @@ fn random_unit_vector() -> Vec3 {
 fn random_vec_in_sphere() -> Vec3 {
     loop {
         let v = random_vec_in_cube();
-        if v.len() <= 1. {
+        // TODO WIP NOT SURE, why does rt in one weekend use len_squared? len
+        // makes more sense, we're testing the distance between the center and
+        // the surface of a unit sphere, which can be at max 1
+        // maybe it's just a speed thing?
+        if v.len_squared() < 1. {
             return v;
         }
     }
