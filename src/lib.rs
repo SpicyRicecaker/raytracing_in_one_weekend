@@ -12,7 +12,7 @@ use std::{
 };
 
 use hittable::{HitRecord, Hittable};
-use rand::{thread_rng, distributions::uniform::SampleRange, Rng};
+use rand::{distributions::uniform::SampleRange, thread_rng, Rng};
 use ray::Ray;
 use vec::Vec3;
 
@@ -46,7 +46,9 @@ impl Scene {
 
         // # of objects is usually small for our raytracer
         self.objects.iter().for_each(|o| {
-            if let Some(t_hit_record) = Object::hit(ray, ray_range.clone(), &o.as_ref().borrow().object_type) {
+            if let Some(t_hit_record) =
+                Object::hit(ray, ray_range.clone(), &o.as_ref().borrow().object_type)
+            {
                 hit_record = Some(t_hit_record);
 
                 // the bigger the t is, the farther away the object. Therefore
@@ -60,8 +62,8 @@ impl Scene {
     }
 }
 
-/// TODO: Not sure how expensive reinitializing a thread_rng is. 
-pub fn random_double<R: RangeBounds<f64> + SampleRange<f64> >(range: R) -> f64 {
+/// TODO: Not sure how expensive reinitializing a thread_rng is.
+pub fn random_double<R: RangeBounds<f64> + SampleRange<f64>>(range: R) -> f64 {
     let mut rng = thread_rng();
     rng.gen_range(range)
 }

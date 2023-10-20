@@ -3,6 +3,8 @@ use std::fs;
 use std::time::Instant;
 
 use log::info;
+use rand::thread_rng;
+use rand::Rng;
 use std::error::Error;
 use std::fmt::Write;
 
@@ -42,7 +44,7 @@ impl Camera {
         // we also need to define the camera normal so that we can know where the viewport plane is.
         let focal_length = 1.;
 
-        let samples_per_pixel = 10;
+        let samples_per_pixel = 100;
 
         Self {
             aspect_ratio,
@@ -53,7 +55,7 @@ impl Camera {
             eye,
             eye_direction,
             focal_length,
-            samples_per_pixel
+            samples_per_pixel,
         }
     }
 
@@ -98,7 +100,8 @@ impl Camera {
                     // we need a number between -pixel_delta_v/2 and +pixel_delta_v/2 to add to the pixel y
                     let dy = random_double(-0.5..=0.5);
 
-                    let sample_pixel = current_pixel_center + pixel_delta_u * dx + pixel_delta_v * dy;
+                    let sample_pixel =
+                        current_pixel_center + pixel_delta_u * dx + pixel_delta_v * dy;
 
                     // generate a random number between -pixel_delta_u and +pixel_delta_u
                     let ray = Ray {
@@ -110,7 +113,7 @@ impl Camera {
                     // multiple rays hitting the same part of the object .
                     // isn't this algorithm n^2?
 
-                    total_color += Self::ray_color(&ray, scene);
+                    total_color += Self::ray_color(&ray, scene, 0);
                 }
                 // divide color by num samples, clamp at 1
                 write_color(&mut buf, total_color, self.samples_per_pixel)?;
@@ -124,12 +127,59 @@ impl Camera {
 
         Ok(())
     }
-    pub fn ray_color(ray: &Ray, scene: &mut Scene) -> Color {
+    pub fn ray_color(ray: &Ray, scene: &mut Scene, depth: u32) -> Color {
         if let Some(hit_record) = scene.hit(ray, 0.0..MAX) {
             // now move everything to a range of 0 to 1 and return the color
-            (hit_record.normal + vec3![1., 1., 1.]) / 2.
+            let direction = random_on_hit_sphere(&hit_record.normal);
+            // each bounce reduces light, attenuation / power droppoff / bounces away
+            0.5 * Self::ray_color(
+                &Ray {
+                    origin: ray.origin,
+                    direction,
+                },
+                scene,
+                depth + 1
+            )
         } else {
-            vec3![0., 0., 0.]
+            let unit_direction: Vec3 = ray.direction.unit_vec();
+            // normalize this to a range of 0 and 1
+            let a = 0.5 * (unit_direction.y + 1.0);
+            // linear interpolation of a with an off-blue color
+            (1.0 - a) * vec3![1.0, 1.0, 1.0] + a * vec3!(0.5, 0.7, 1.0)
         }
     }
+}
+
+// TODO WIP, generating a random point from a sphere via a sophisticated
+// algorithm is actually very difficult
+// MUCH BETTER THAN LOOP is to simply just take the inverse
+fn random_on_hit_sphere(normal: &Vec3) -> Vec3 {
+    let v = random_unit_vector();
+    if v.dot(*normal) > 0. {
+        v
+    } else {
+        -v
+    }
+}
+
+fn random_unit_vector() -> Vec3 {
+    random_vec_in_sphere().unit_vec()
+}
+
+fn random_vec_in_sphere() -> Vec3 {
+    loop {
+        let v = random_vec_in_cube();
+        if v.len() <= 1. {
+            return v;
+        }
+    }
+}
+
+fn random_vec_in_cube() -> Vec3 {
+    let mut rng = thread_rng();
+    vec3![
+        rng.gen_range(-1.0..=1.0),
+        rng.gen_range(-1.0..=1.0),
+        rng.gen_range(-1.0..=1.0)
+    ]
 }
