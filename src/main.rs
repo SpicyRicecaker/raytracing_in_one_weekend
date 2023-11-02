@@ -1,4 +1,4 @@
-const IMAGE_WIDTH: u32 = 256;
+const IMAGE_WIDTH: u32 = 400;
 const ASPECT_RATIO: f64 = 16. / 9.;
 const VIEWPORT_HEIGHT: f64 = 2.;
 // const IMAGE_HEIGHT: u32 = 256;

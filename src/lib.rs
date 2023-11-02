@@ -64,6 +64,5 @@ impl Scene {
 
 /// TODO: Not sure how expensive reinitializing a thread_rng is.
 pub fn random_double<R: RangeBounds<f64> + SampleRange<f64>>(range: R) -> f64 {
-    let mut rng = thread_rng();
-    rng.gen_range(range)
+    thread_rng().gen_range(range)
 }

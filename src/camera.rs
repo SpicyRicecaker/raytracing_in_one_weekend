@@ -132,28 +132,29 @@ impl Camera {
         Ok(())
     }
     pub fn ray_color(ray: &Ray, scene: &mut Scene, depth_remaining: u32) -> Color {
-        match (scene.hit(ray, 0.0..MAX), depth_remaining) {
-            (Some(hit_record), d) if d > 0 => {
-                // now move everything to a range of 0 to 1 and return the color
-                let direction = random_on_hemisphere(&hit_record.normal);
-                // each bounce reduces light, attenuation / power droppoff / bounces away
-                0.5 * Self::ray_color(
-                    &Ray {
-                        // INITIATE THE NEW RAY AT THE POINT OF HIT LOL
-                        origin: hit_record.p,
-                        direction,
-                    },
-                    scene,
-                    depth_remaining - 1,
-                )
-            }
-            _ => {
-                let unit_direction: Vec3 = ray.direction.unit_vec();
-                // normalize this to a range of 0 and 1
-                let a = 0.5 * (unit_direction.y + 1.0);
-                // linear interpolation of a with an off-blue color
-                (1.0 - a) * vec3![1.0, 1.0, 1.0] + a * vec3!(0.5, 0.7, 1.0)
-            }
+        if depth_remaining == 0 {
+            return vec3![0., 0., 0.];
+        }
+        // BIG, BIG SUBTLE BUG, IF YOU USE 0, THE NEW DIFFUSE RAYS JUST SCATTER OFF THE SURFACE, BUT THEY MIGHT SPAWN BEHIND THE SPHERE, CAUSING LIGHT TO NOT BOUNCE ANYWHERE LOL
+        if let Some(hit_record) = scene.hit(ray, 0.0001..MAX) {
+            // now move everything to a range of 0 to 1 and return the color
+            let direction = random_on_hemisphere(&hit_record.normal);
+            // each bounce reduces light, attenuation / power droppoff / bounces away
+            0.5 * Self::ray_color(
+                &Ray {
+                    // INITIATE THE NEW RAY AT THE POINT OF HIT LOL
+                    origin: hit_record.p,
+                    direction,
+                },
+                scene,
+                depth_remaining - 1,
+            )
+        } else {
+            let unit_direction: Vec3 = ray.direction.unit_vec();
+            // normalize this to a range of 0 and 1
+            let a = 0.5 * (unit_direction.y + 1.0);
+            // linear interpolation of a with an off-blue color
+            (1.0 - a) * vec3![1.0, 1.0, 1.0] + a * vec3!(0.5, 0.7, 1.0)
         }
     }
 }
