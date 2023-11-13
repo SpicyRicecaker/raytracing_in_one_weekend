@@ -1,11 +1,15 @@
+use std::cell::RefCell;
 use std::ops::Range;
+use std::rc::Rc;
 
+use crate::material::Material;
+use crate::material::MaterialType;
 use crate::ray::*;
 use crate::vec::*;
 use crate::Object;
 use crate::ObjectType;
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Default, Clone)]
 pub struct HitRecord {
     /// The point of intersection between ray and object
     pub p: Point3,
@@ -18,10 +22,17 @@ pub struct HitRecord {
     /// Whether or not the ray hit the object's surface from the outside or from
     /// the inside
     pub front_face: bool,
+    pub material: Option<Rc<RefCell<Material>>>,
 }
 
 impl HitRecord {
-    pub fn new(p: Point3, t: f64, outward_normal: Vec3, ray: &Ray) -> Self {
+    pub fn new(
+        p: Point3,
+        t: f64,
+        outward_normal: Vec3,
+        ray: &Ray,
+        material: Option<Rc<RefCell<Material>>>,
+    ) -> Self {
         let (front_face, normal) = HitRecord::get_face_normal(outward_normal, ray);
 
         HitRecord {
@@ -29,6 +40,7 @@ impl HitRecord {
             p,
             normal,
             front_face,
+            material
         }
     }
 
@@ -114,7 +126,7 @@ pub fn hit_sphere(
         // the intersection point always
         let outward_normal = (-center + p) / radius;
 
-        Some(HitRecord::new(p, t, outward_normal, ray))
+        Some(HitRecord::new(p, t, outward_normal, ray, None))
     } else {
         None
     }
@@ -123,6 +135,8 @@ pub fn hit_sphere(
 /// Instead of calculating on demand for if a ray intersects an object, we
 /// simply store hit info for all objects for a specific ray (potentially lots
 /// of mutations)
+///
+/// This trait is basically useless, since the only struct which will ever implement this trait is `Object`
 pub trait Hittable {
     fn hit(ray: &Ray, ray_range: Range<f64>, object_type: &ObjectType) -> Option<HitRecord>;
 }

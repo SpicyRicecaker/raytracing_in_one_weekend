@@ -15,11 +15,17 @@ pub fn write_color(
     let mut g = pixel_color.y;
     let mut b = pixel_color.z;
 
-    // regulate r, g, b
+    // divide r, g, b by samples, essentially averaging the value of the pixel
+    // over all samples
     let scale = 1. / samples_per_pixel as f64;
+
     r *= scale;
     g *= scale;
     b *= scale;
+
+    r = linear_to_gamma(r);
+    g = linear_to_gamma(g);
+    b = linear_to_gamma(b);
 
     writeln!(
         buf,
@@ -30,4 +36,8 @@ pub fn write_color(
     )?;
 
     Ok(())
+}
+
+fn linear_to_gamma(linear_component: f64) -> f64 {
+    linear_component.sqrt()
 }

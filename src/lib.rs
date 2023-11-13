@@ -1,6 +1,7 @@
 pub mod camera;
 pub mod color;
 pub mod hittable;
+pub mod material;
 pub mod ray;
 pub mod vec;
 
@@ -12,6 +13,7 @@ use std::{
 };
 
 use hittable::{HitRecord, Hittable};
+use material::{Material, MaterialType};
 use rand::{distributions::uniform::SampleRange, thread_rng, Rng};
 use ray::Ray;
 use vec::Vec3;
@@ -19,6 +21,8 @@ use vec::Vec3;
 pub struct Object {
     pub hit_record: Option<HitRecord>,
     pub object_type: ObjectType,
+    pub material: Rc<RefCell<Material>>,
+    pub label: String
 }
 
 pub enum ObjectType {
@@ -46,15 +50,16 @@ impl Scene {
 
         // # of objects is usually small for our raytracer
         self.objects.iter().for_each(|o| {
-            if let Some(t_hit_record) =
-                Object::hit(ray, ray_range.clone(), &o.as_ref().borrow().object_type)
+            if let Some(mut t_hit_record) =
+                Object::hit(ray, ray_range.clone(), &o.borrow().object_type)
             {
-                hit_record = Some(t_hit_record);
-
+                ray_range.end = t_hit_record.t;
+                t_hit_record.material = Some(o.borrow().material.clone());
                 // the bigger the t is, the farther away the object. Therefore
                 // to only accept the closest object we should cap the t value
                 // at the current t
-                ray_range.end = t_hit_record.t;
+
+                hit_record = Some(t_hit_record);
             }
         });
 

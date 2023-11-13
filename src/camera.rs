@@ -10,6 +10,7 @@ use std::fmt::Write;
 
 use crate::color::write_color;
 use crate::color::Color;
+use crate::material::scatter;
 use crate::random_double;
 use crate::ray::Ray;
 use crate::vec::*;
@@ -136,19 +137,19 @@ impl Camera {
             return vec3![0., 0., 0.];
         }
         // BIG, BIG SUBTLE BUG, IF YOU USE 0, THE NEW DIFFUSE RAYS JUST SCATTER OFF THE SURFACE, BUT THEY MIGHT SPAWN BEHIND THE SPHERE, CAUSING LIGHT TO NOT BOUNCE ANYWHERE LOL
-        if let Some(hit_record) = scene.hit(ray, 0.0001..MAX) {
+        if let Some(hit_record) = scene.hit(ray, 0.001..MAX) {
             // now move everything to a range of 0 to 1 and return the color
-            let direction = random_on_hemisphere(&hit_record.normal);
-            // each bounce reduces light, attenuation / power droppoff / bounces away
-            0.5 * Self::ray_color(
-                &Ray {
-                    // INITIATE THE NEW RAY AT THE POINT OF HIT LOL
-                    origin: hit_record.p,
-                    direction,
-                },
-                scene,
-                depth_remaining - 1,
-            )
+            if let Some(scatter) = scatter(
+                &hit_record.material.as_ref().unwrap().borrow(),
+                &ray.direction,
+                &hit_record,
+            ) {
+                // each bounce reduces light, attenuation / power droppoff / bounces away
+                scatter.attenuation
+                    * Self::ray_color(&scatter.scattered, scene, depth_remaining - 1)
+            } else {
+                vec3![0., 0., 0.]
+            }
         } else {
             let unit_direction: Vec3 = ray.direction.unit_vec();
             // normalize this to a range of 0 and 1
@@ -162,7 +163,7 @@ impl Camera {
 // TODO WIP, generating a random point from a sphere via a sophisticated
 // algorithm is actually very difficult
 // MUCH BETTER THAN LOOP is to simply just take the inverse
-fn random_on_hemisphere(normal: &Vec3) -> Vec3 {
+pub fn random_on_hemisphere(normal: &Vec3) -> Vec3 {
     let v = random_unit_vector();
     // on the same hemisphere as the normal
     if v.dot(*normal) > 0. {
@@ -171,10 +172,8 @@ fn random_on_hemisphere(normal: &Vec3) -> Vec3 {
         -v
     }
 }
-
-/// We need this to normalize vectors that starting from the center, do not land
 /// on the *surface* of the sphere
-fn random_unit_vector() -> Vec3 {
+pub fn random_unit_vector() -> Vec3 {
     random_vec_in_sphere().unit_vec()
 }
 
